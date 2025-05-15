@@ -1,101 +1,71 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { ChatService } from '../service/websockets.service';
 
 @Component({
   selector: 'app-root',
   imports: [CommonModule, FormsModule],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.scss',
 })
-export class AppComponent {
-  title = 'clienteAngular';
-  sessionUser: string = 'usuarioQuemado';
-
-  // Para buscar usuario
-  searchUser: string = '';
+export class AppComponent implements OnDestroy {
+  sessionUser = '';
+  senderName = '';
+  receiverName = '';
   currentUser: string | null = null;
 
-  newMessage: string = '';
+  messages: Array<{
+    content: string;
+    from: string;
+    timestamp: Date;
+    seen?: boolean;
+  }> = [];
 
-  // Cambiamos de sender → from
-  messages = [
-  {
-    content: 'Hola, ¿cómo estás?',
-    from: 'juan',
-    to: 'usuarioQuemado',
-    timestamp: new Date('2025-05-14T10:15:00'),
-    seen: true,
-  },
-  {
-    content: 'Hola Juan, todo bien. ¿Y tú?',
-    from: 'usuarioQuemado',
-    to: 'juan',
-    timestamp: new Date('2025-05-14T10:16:00'),
-    seen: true,
-  },
-  {
-    content: 'Bien, gracias. ¿Quieres juntarnos más tarde?',
-    from: 'juan',
-    to: 'usuarioQuemado',
-    timestamp: new Date('2025-05-14T10:17:00'),
-    seen: false,
-  },
-  {
-    content: 'Claro, me parece perfecto.',
-    from: 'usuarioQuemado',
-    to: 'juan',
-    timestamp: new Date('2025-05-14T10:18:00'),
-    seen: false,
-  },
-  {
-    content: '¿Qué tal tu día?',
-    from: 'maria',
-    to: 'usuarioQuemado',
-    timestamp: new Date('2025-05-14T09:00:00'),
-    seen: true,
-  },
-];
+  newMessage = '';
 
-  searchForUser() {
-    if (this.searchUser.trim()) {
-      this.currentUser = this.searchUser.trim();
-    }
+  private messagesSub?: Subscription;
+
+  constructor(private chatService: ChatService) {}
+
+  startChat() {
+    if (!this.senderName.trim() || !this.receiverName.trim()) return;
+    this.currentUser = this.receiverName;
+    this.chatService.connect(this.senderName, this.receiverName);
+    this.sessionUser = this.senderName;
+    this.messagesSub = this.chatService.messages$.subscribe((msgs) => {
+      this.messages = msgs.map((m) => ({
+        content: m.content,
+        from: m.senderName,
+        timestamp: new Date(m.createdAt),
+        seen: true,
+      }));
+    });
+  }
+
+  sendMessage() {
+    const content = this.newMessage.trim();
+    if (!content) return;
+
+    this.chatService.sendMessage(content, this.senderName);
+
+    this.newMessage = '';
   }
 
   logoutChat() {
     this.currentUser = null;
-    this.newMessage = '';
+    this.senderName = '';
+    this.receiverName = '';
     this.messages = [];
+    this.newMessage = '';
+
+    this.messagesSub?.unsubscribe();
+    this.chatService.closeConnection();
   }
 
-  sendMessage() {
-    if (this.newMessage.trim() && this.currentUser) {
-      this.messages.push({
-        content: this.newMessage.trim(),
-        from: this.sessionUser,
-        to: this.currentUser,
-        timestamp: new Date(),
-        seen: false,
-      });
-      this.newMessage = '';
-      // Simula respuesta automática
-      setTimeout(() => {
-        this.messages.push({
-          content: 'Respuesta automática',
-          from: this.currentUser!,
-          to: this.sessionUser,
-          timestamp: new Date(),
-          seen: true,
-        });
-      }, 1500);
-    }
+  ngOnDestroy() {
+    this.messagesSub?.unsubscribe();
+    this.chatService.closeConnection();
   }
-
-}
-
-export interface Message {
-  content: string;
-  sender: 'me' | 'other';
-  timestamp: Date;
 }
