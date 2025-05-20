@@ -10,15 +10,44 @@
     >
   </div>
 
+  <!-- Selector modo chat -->
+  <div class="w-full max-w-3xl mx-auto p-4 flex justify-center gap-4 bg-white border-b border-gray-300 sticky top-14 z-10">
+    <button
+      type="button"
+      (click)="setChatMode(false)"
+      [class.font-bold]="!isGroupChat"
+      class="underline text-blue-600"
+    >
+      Chat Privado
+    </button>
+    <button
+      type="button"
+      (click)="setChatMode(true)"
+      [class.font-bold]="isGroupChat"
+      class="underline text-green-600"
+    >
+      Chat Grupal
+    </button>
+  </div>
+
   <!-- Contenedor principal -->
   <div class="flex-1 w-full flex items-center justify-center mt-6">
-    <!-- Buscar usuario -->
+    <!-- Formularios inicio chat -->
     <div
-      *ngIf="!currentUser"
+      *ngIf="!currentUser && !groupName"
       class="w-full max-w-md bg-white p-6 rounded-lg shadow"
     >
-      <h2 class="text-xl font-semibold mb-4">Iniciar chat</h2>
-      <form (ngSubmit)="startChat()" #chatForm="ngForm">
+      <h2 class="text-xl font-semibold mb-4">
+        Iniciar {{ isGroupChat ? 'chat grupal' : 'chat' }}
+      </h2>
+
+      <!-- Chat privado -->
+      <form
+        *ngIf="!isGroupChat"
+        (ngSubmit)="startChat()"
+        #chatForm="ngForm"
+        class="flex flex-col"
+      >
         <input
           name="senderName"
           [(ngModel)]="senderName"
@@ -41,18 +70,47 @@
           Iniciar chat
         </button>
       </form>
+
+      <!-- Chat grupal -->
+      <div *ngIf="isGroupChat" class="flex flex-col">
+        <input
+          name="senderName"
+          [(ngModel)]="senderName"
+          required
+          placeholder="Tu nombre"
+          class="w-full px-4 py-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
+        />
+        <input
+          name="groupIdInput"
+          [(ngModel)]="groupIdInput"
+          required
+          placeholder="ID o nombre del grupo"
+          class="w-full px-4 py-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
+        />
+        <button
+          type="button"
+          (click)="startGroupChat()"
+          [disabled]="!senderName.trim() || !groupIdInput.trim()"
+          class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded"
+        >
+          Iniciar chat grupal
+        </button>
+      </div>
     </div>
 
     <!-- Chat visible -->
     <div
-      *ngIf="currentUser"
+      *ngIf="currentUser || groupName"
       class="flex flex-col w-full max-w-3xl h-full bg-white rounded-xl shadow"
     >
       <!-- Cabecera -->
       <div
         class="p-4 border-b font-semibold text-lg flex justify-between items-center"
       >
-        <div>Chat con {{ currentUser }}</div>
+        <div>
+          <ng-container *ngIf="!isGroupChat">Chat con {{ currentUser }}</ng-container>
+          <ng-container *ngIf="isGroupChat">{{ groupName }}</ng-container>
+        </div>
         <div class="text-sm text-gray-500">Tú: {{ sessionUser }}</div>
         <button
           (click)="logoutChat()"
@@ -129,6 +187,7 @@
           type="text"
           placeholder="Escribe un mensaje..."
           class="flex-1 px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+          (keydown.enter)="sendMessage()"
         />
         <button
           (click)="sendMessage()"
