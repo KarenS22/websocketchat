@@ -68,7 +68,7 @@ export class AppComponent implements OnDestroy {
     this.groupName = `Grupo: ${this.groupIdInput}`;
     this.sessionUser = this.senderName;
 
-    this.groupChatService.connect(this.senderName, Number(this.groupIdInput));
+    this.groupChatService.connect(this.senderName, this.groupIdInput , this.groupName)
 
     this.messagesSub?.unsubscribe();
     this.messagesSub = this.groupChatService.messages$.subscribe((msgs) => {

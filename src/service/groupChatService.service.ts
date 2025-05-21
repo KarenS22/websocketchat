@@ -13,15 +13,16 @@ export class GroupChatService {
 
   private currentGroupId: number | null = null;
 
-  connect(senderName: string, groupId: number): void {
+  connect(senderName: string, groupId: string, groupName: string): void {
     this.ws = new WebSocket('ws://localhost:3000');
 
     this.ws.onopen = () => {
       this.ws.send(
         JSON.stringify({
-          type: 'init-group',
+          type: 'group-init',
           senderName,
           groupId,
+          groupName, 
         })
       );
     };
@@ -29,7 +30,7 @@ export class GroupChatService {
     this.ws.onmessage = (event) => {
       const data: IncomingGroupData = JSON.parse(event.data);
 
-      if (data.type === 'history-group' && data.messages) {
+      if (data.type === 'group-history' && data.messages) {
         this.currentGroupId = data.groupId || null;
         this.messagesSubject.next(data.messages);
       } else if (data.type === 'group-message' && data.message) {
@@ -64,6 +65,7 @@ export class GroupChatService {
       groupId: this.currentGroupId,
       content,
       senderName,
+      groupName: 'grupo-general',
     };
 
     this.ws.send(JSON.stringify(message));
